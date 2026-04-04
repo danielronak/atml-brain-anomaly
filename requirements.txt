@@ -1,0 +1,15 @@
+torch==2.3.0
+torchvision==0.18.0
+numpy
+matplotlib
+scikit-learn
+scikit-image
+nibabel
+tqdm
+monai
+timm
+mlflow
+azure-ai-ml
+azureml-mlflow
+opencv-python
+einops
