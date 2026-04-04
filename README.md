@@ -16,7 +16,7 @@ anatomically coherent reconstruction and sharper anomaly maps.
 
 ## Authors
 - Ronak Daniel
-- [Your friend's name]
+- Neel Jaiswal
 
 ## Status
 🔧 Phase 1 — Environment & Repository Setup
