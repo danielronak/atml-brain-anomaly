@@ -1,0 +1,25 @@
+name: atml
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - matplotlib
+  - scikit-learn
+  - scikit-image
+  - nibabel
+  - tqdm
+  - pip:
+    - torch==2.3.0
+    - torchvision==0.18.0
+    - monai
+    - timm
+    - mlflow
+    - azure-ai-ml
+    - azureml-mlflow
+    - opencv-python
+    - einops
