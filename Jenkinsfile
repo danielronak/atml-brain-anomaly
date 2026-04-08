@@ -4,13 +4,14 @@ pipeline {
     stages {
         stage('Local Sanity Check (RTX 3050)') {
             steps {
-                // Forcefully call the raw batch script to bypass Conda's headless crash
                 bat '''
                 set KMP_DUPLICATE_LIB_OK=TRUE
+                set PYTHONIOENCODING=utf-8
                 call "C:\\Users\\Ronak Daniel\\anaconda3\\Scripts\\activate.bat" atml
                 python scripts/train_baseline.py
                 '''
             }
+        }
         }
         
         stage('Deploy Heavy Training to Azure') {
