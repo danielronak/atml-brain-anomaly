@@ -12,11 +12,9 @@ pipeline {
                 '''
             }
         }
-        }
         
         stage('Deploy Heavy Training to Azure') {
             steps {
-                // If the local test passes, automatically submit the Azure job
                 bat '''
                 az ml job create -f azure/train_job.yml
                 '''
