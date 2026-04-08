@@ -1,5 +1,4 @@
 pipeline {
-    // Run on your local machine
     agent any 
 
     stages {
@@ -12,7 +11,6 @@ pipeline {
                 python scripts/train_baseline.py
                 '''
             }
-        }
         }
         
         stage('Deploy Heavy Training to Azure') {
