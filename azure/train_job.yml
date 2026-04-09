@@ -1,0 +1,17 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+type: command
+description: Phase 1 WGAN-GP Baseline Training
+experiment_name: atml-brain-anomaly-baseline
+
+# The code folder to upload to Azure ('.' means the whole project)
+code: .
+
+# The command Azure will run once the server turns on
+command: >-
+  python scripts/train_baseline.py
+
+# A curated Microsoft Docker image with PyTorch and CUDA pre-installed
+environment: azureml:AzureML-pytorch-2.0-ubuntu20.04-py38-cuda11.8-gpu@latest
+
+# IMPORTANT: You must change 'gpu-cluster' to the exact name of the compute you built in Azure
+compute: azureml:gpu-cluster
