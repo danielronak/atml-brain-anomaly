@@ -3,12 +3,12 @@ import torch.nn as nn
 import torch.optim as optim
 
 class WGANTrainer:
-    def __init__(self, generator, discriminator, dataloader, device, lr=0.0002, z_dim=512):
+    def __init__(self, generator, discriminator, train_loader, device, lr=0.0002, z_dim=512):
         self.device = device
         self.z_dim = z_dim
         self.G = generator.to(device)
         self.D = discriminator.to(device)
-        self.dataloader = dataloader
+        self.dataloader = train_loader
         
         # WGAN-GP requires specific beta values for Adam
         self.opt_G = optim.Adam(self.G.parameters(), lr=lr, betas=(0.0, 0.9))
