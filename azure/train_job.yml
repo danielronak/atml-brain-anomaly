@@ -11,7 +11,7 @@ command: >-
   python scripts/train_baseline.py
 
 # A curated Microsoft Docker image with PyTorch and CUDA pre-installed
-environment: azureml:AzureML-pytorch-2.0-ubuntu20.04-py38-cuda11.8-gpu@latest
+environment: azureml:AzureML-ACPT-pytorch-1.11-py38-cuda11.3-gpu@latest
 
 # IMPORTANT: You must change 'gpu-cluster' to the exact name of the compute you built in Azure
 compute: azureml:gpu-cluster
