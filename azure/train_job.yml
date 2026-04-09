@@ -7,7 +7,7 @@ experiment_name: atml-brain-anomaly-baseline
 code: ..
 
 # The command Azure will run once the server turns on
-command: python ./scripts/train_baseline.py
+command: pip install scikit-learn && python ./scripts/train_baseline.py --epochs 50
 
 # A curated Microsoft Docker image with PyTorch and CUDA pre-installed
 environment: azureml:AzureML-ACPT-pytorch-1.11-py38-cuda11.3-gpu@latest
