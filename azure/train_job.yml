@@ -4,7 +4,7 @@ description: Phase 1 WGAN-GP Baseline Training
 experiment_name: atml-brain-anomaly-baseline
 
 # The code folder to upload to Azure ('.' means the whole project)
-code: .
+code: ..
 
 # The command Azure will run once the server turns on
 command: python ./scripts/train_baseline.py
