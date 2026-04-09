@@ -6,9 +6,9 @@ experiment_name: atml-brain-anomaly-baseline
 # The code folder to upload to Azure (..)
 code: ..
 
-# Chain install scikit-learn and run 50 epochs
+# Chain install scikit-learn, run 50 epochs, and forcefully set the cloud data path
 command: >-
-  pip install scikit-learn && python ./scripts/train_baseline.py --epochs 50
+  pip install scikit-learn && python ./scripts/train_baseline.py --epochs 50 --data_dir ./data/processed
 
 environment: azureml:AzureML-ACPT-pytorch-1.11-py38-cuda11.3-gpu@latest
 compute: azureml:gpu-cluster

@@ -19,21 +19,15 @@ from src.training.trainer import WGANTrainer
 def main():
     parser = argparse.ArgumentParser(description="Train the baseline WGAN-GP")
     parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train')
+    # Default exactly to your Windows path for the Jenkins local test
+    parser.add_argument('--data_dir', type=str, default=r"C:\Users\Ronak Daniel\Documents\atml-brain-anomaly\data\processed", help='Data directory path')
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🚀 Starting WGAN-GP Baseline Training on: {device}")
     
-    # ---------------------------------------------------------
-    # SMART DATA PATHING
-    # ---------------------------------------------------------
-    DATA_DIR = "./data/processed"
-    check_file = os.path.join(DATA_DIR, "healthy_slices.npy")
-    
-    if not os.path.exists(check_file):
-        print("⚠️ Cloud data files not found in workspace. Falling back to local Windows path...")
-        DATA_DIR = r"C:\Users\Ronak Daniel\Documents\atml-brain-anomaly\data\processed"
-    # ---------------------------------------------------------
+    # Use whatever path the argument parser gives us
+    DATA_DIR = args.data_dir
     
     print(f"Loading data from {DATA_DIR}...")
     train_loader, val_loader, _ = get_dataloaders(DATA_DIR, batch_size=16)
