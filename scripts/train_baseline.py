@@ -32,7 +32,9 @@ def main():
     
     # Cloud-safe relative data path (No local C:\ drives!)
     DATA_DIR = "./data/processed"
-    
+    if not os.path.exists(DATA_DIR):
+        print("⚠️ Cloud data path not found. Falling back to local Windows path for Jenkins...")
+        DATA_DIR = r"C:\Users\Ronak Daniel\Documents\atml-brain-anomaly\data\processed"
     # 3. Load Data 
     print(f"Loading data from {DATA_DIR}...")
     # Batch size of 16 is safe for local and cloud GPUs
