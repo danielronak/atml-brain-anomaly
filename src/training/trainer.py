@@ -45,7 +45,9 @@ class WGANTrainer:
         total_d_loss = 0
         
         for batch_idx, data in enumerate(self.dataloader):
-            real_imgs = data[0].to(self.device)
+            # FIX: Removed [0] because the dataset returns just the tensor, not a tuple!
+            real_imgs = data.to(self.device)
+            
             if real_imgs.dim() == 3:
                 real_imgs = real_imgs.unsqueeze(1)
                 
@@ -75,20 +77,28 @@ class WGANTrainer:
             # ==========================================
             # 2. TRAIN GENERATOR (Every n_critic steps)
             # ==========================================
+            # Initialize loss_G to 0 so the print statement doesn't crash on early batches
+            loss_G_item = 0 
+
             if batch_idx % self.n_critic == 0:
                 self.opt_G.zero_grad()
                 
+                # Standard practice: sample fresh noise for the Generator step
+                z_fresh = torch.randn(batch_size, self.z_dim, 1, 1, device=self.device)
+                fake_imgs_for_G = self.G(z_fresh)
+                
                 # Generator loss: -Mean(Critic(Fake))
-                fake_imgs_for_G = self.G(z)
                 loss_G = -torch.mean(self.D(fake_imgs_for_G))
                 
                 loss_G.backward()
                 self.opt_G.step()
-                total_g_loss += loss_G.item()
+                
+                loss_G_item = loss_G.item()
+                total_g_loss += loss_G_item
             
             if batch_idx % 10 == 0:
                 print(f"🚀 Epoch [{epoch_idx}] Batch [{batch_idx}/{len(self.dataloader)}] "
-                      f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item() if batch_idx % self.n_critic == 0 else 0:.4f}")
+                      f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G_item:.4f}")
                 
         avg_d_loss = total_d_loss / len(self.dataloader)
         avg_g_loss = total_g_loss / (len(self.dataloader) / self.n_critic)

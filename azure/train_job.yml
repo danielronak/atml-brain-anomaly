@@ -3,14 +3,12 @@ type: command
 description: Phase 1 WGAN-GP Baseline Training
 experiment_name: atml-brain-anomaly-baseline
 
-# The code folder to upload to Azure ('.' means the whole project)
+# The code folder to upload to Azure (..)
 code: ..
 
-# The command Azure will run once the server turns on
-command: pip install scikit-learn && python ./scripts/train_baseline.py --epochs 50
+# Chain install scikit-learn and run 50 epochs
+command: >-
+  pip install scikit-learn && python ./scripts/train_baseline.py --epochs 50
 
-# A curated Microsoft Docker image with PyTorch and CUDA pre-installed
 environment: azureml:AzureML-ACPT-pytorch-1.11-py38-cuda11.3-gpu@latest
-
-# IMPORTANT: You must change 'gpu-cluster' to the exact name of the compute you built in Azure
 compute: azureml:gpu-cluster

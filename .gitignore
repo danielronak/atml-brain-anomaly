@@ -219,5 +219,8 @@ outputs/
 # Ignore Azure ML local configuration/cache folders
 .azureml/
 user_logs/
+*.log
 
+# Protect GitHub from large data and app files
 data/processed/*.npy
+*.war
