@@ -46,6 +46,9 @@ class WGANTrainer:
         
         for batch_idx, data in enumerate(self.dataloader):
             real_imgs = data[0].to(self.device)
+            if real_imgs.dim() == 3:
+                real_imgs = real_imgs.unsqueeze(1)
+                
             batch_size = real_imgs.size(0)
             
             # ==========================================
