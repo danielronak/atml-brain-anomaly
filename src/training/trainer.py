@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-class Trainer:
+class WGANTrainer:
     def __init__(self, generator, discriminator, dataloader, device, lr=0.0002, z_dim=512):
         self.device = device
         self.z_dim = z_dim
