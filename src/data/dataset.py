@@ -54,14 +54,24 @@ class HealthyDataset(Dataset):
     def __getitem__(self, idx):
         """
         Returns one slice as a PyTorch tensor.
-        Shape: (1, 128, 128) — the 1 is the channel dimension
-        (like RGB images have 3 channels, MRI has 1)
+        Shape: (1, 128, 128)
         """
         slice_2d = self.slices[idx]  # shape: (128, 128)
 
         # Add channel dimension and convert to tensor
         tensor = torch.tensor(slice_2d, dtype=torch.float32).unsqueeze(0)
-        # Shape is now (1, 128, 128)
+        
+        # ==========================================
+        # CRITICAL WGAN-GP NORMALIZATION FIX
+        # ==========================================
+        # 1. Scale to [0, 1] safely (avoid division by zero)
+        t_min, t_max = tensor.min(), tensor.max()
+        if t_max > t_min:
+            tensor = (tensor - t_min) / (t_max - t_min)
+            
+        # 2. Scale to [-1, 1] to perfectly match Generator's Tanh() output
+        tensor = (tensor * 2.0) - 1.0
+        # ==========================================
 
         return tensor
 
@@ -71,9 +81,6 @@ class AnomalyDataset(Dataset):
     """
     Loads tumor slices AND their segmentation masks for evaluation.
     Used ONLY at test time — never during training.
-
-    Returns both the scan and the ground truth mask so we can
-    measure how accurately our anomaly map matches the real tumor.
     """
 
     def __init__(self, data_dir):
@@ -100,6 +107,15 @@ class AnomalyDataset(Dataset):
         slice_tensor = torch.tensor(slice_2d, dtype=torch.float32).unsqueeze(0)
         mask_tensor  = torch.tensor(mask_2d,  dtype=torch.float32).unsqueeze(0)
 
+        # ==========================================
+        # CRITICAL WGAN-GP NORMALIZATION FIX
+        # ==========================================
+        t_min, t_max = slice_tensor.min(), slice_tensor.max()
+        if t_max > t_min:
+            slice_tensor = (slice_tensor - t_min) / (t_max - t_min)
+        slice_tensor = (slice_tensor * 2.0) - 1.0
+        # ==========================================
+
         # Binarise mask: any tumor label > 0 becomes 1
         mask_tensor = (mask_tensor > 0).float()
 
@@ -110,16 +126,6 @@ class AnomalyDataset(Dataset):
 def get_dataloaders(data_dir, batch_size=16, num_workers=0):
     """
     Creates and returns all three DataLoaders needed for training.
-
-    Args:
-        data_dir    : path to processed .npy files
-        batch_size  : number of slices per batch (16 is good for RTX 3050)
-        num_workers : parallel workers for loading (2 is safe on Windows)
-
-    Returns:
-        train_loader : batches of healthy slices for training
-        val_loader   : batches of healthy slices for validation
-        test_loader  : batches of tumor slices + masks for evaluation
     """
     train_dataset = HealthyDataset(data_dir, split="train")
     val_dataset   = HealthyDataset(data_dir, split="val")
@@ -128,15 +134,15 @@ def get_dataloaders(data_dir, batch_size=16, num_workers=0):
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True,           # shuffle training data every epoch
+        shuffle=True,           
         num_workers=num_workers,
-        pin_memory=True         # faster GPU transfer
+        pin_memory=True         
     )
 
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
-        shuffle=False,          # no need to shuffle validation
+        shuffle=False,          
         num_workers=num_workers,
         pin_memory=True
     )
@@ -144,7 +150,7 @@ def get_dataloaders(data_dir, batch_size=16, num_workers=0):
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
-        shuffle=False,          # never shuffle test data
+        shuffle=False,          
         num_workers=num_workers,
         pin_memory=True
     )

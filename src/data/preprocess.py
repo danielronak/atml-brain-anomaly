@@ -42,10 +42,15 @@ def normalise(volume):
         return volume
     return (volume - vmin) / (vmax - vmin)
 
-def resize_slice(slice_2d):
-    """Resize a 2D slice to IMG_SIZE x IMG_SIZE."""
-    return resize(slice_2d, (IMG_SIZE, IMG_SIZE),
-                  anti_aliasing=True, preserve_range=True)
+def resize_image(slice_2d):
+    """Resize MRI scan with anti-aliasing. Enforce float32 to save RAM."""
+    resized = resize(slice_2d, (IMG_SIZE, IMG_SIZE), anti_aliasing=True, preserve_range=True)
+    return resized.astype(np.float32)
+
+def resize_mask(slice_2d):
+    """Resize segmentation mask strictly without anti-aliasing (Nearest Neighbor). Enforce uint8."""
+    resized = resize(slice_2d, (IMG_SIZE, IMG_SIZE), order=0, anti_aliasing=False, preserve_range=True)
+    return resized.astype(np.uint8)
 
 def has_brain(slice_2d, threshold=MIN_BRAIN_FRACTION):
     """Return True if slice contains enough brain tissue to be useful."""
@@ -95,9 +100,9 @@ for patient in tqdm(patient_dirs):
         if not has_brain(flair_slice):
             continue
 
-        # Resize to 128x128
-        flair_resized = resize_slice(flair_slice)
-        seg_resized   = resize_slice(seg_slice)
+        # Resize correctly based on data type
+        flair_resized = resize_image(flair_slice)
+        seg_resized   = resize_mask(seg_slice)
 
         # Sort into healthy vs tumor
         if has_tumor(seg_slice):
@@ -110,10 +115,11 @@ for patient in tqdm(patient_dirs):
 # ── SAVE RESULTS ───────────────────────────────────────────────
 print(f"\nSaving arrays...")
 
-healthy_slices = np.array(healthy_slices, dtype=np.float32)
-tumor_slices   = np.array(tumor_slices,   dtype=np.float32)
-healthy_masks  = np.array(healthy_masks,  dtype=np.float32)
-tumor_masks    = np.array(tumor_masks,    dtype=np.float32)
+# The arrays are already the correct datatypes from the functions above!
+healthy_slices = np.array(healthy_slices)
+tumor_slices   = np.array(tumor_slices)
+healthy_masks  = np.array(healthy_masks)
+tumor_masks    = np.array(tumor_masks)
 
 np.save(os.path.join(OUTPUT_DIR, "healthy_slices.npy"), healthy_slices)
 np.save(os.path.join(OUTPUT_DIR, "tumor_slices.npy"),   tumor_slices)
@@ -121,6 +127,6 @@ np.save(os.path.join(OUTPUT_DIR, "healthy_masks.npy"),  healthy_masks)
 np.save(os.path.join(OUTPUT_DIR, "tumor_masks.npy"),    tumor_masks)
 
 print(f"\n✅ Done!")
-print(f"   Healthy slices : {healthy_slices.shape}")
-print(f"   Tumor slices   : {tumor_slices.shape}")
+print(f"   Healthy slices : {healthy_slices.shape} ({healthy_slices.dtype})")
+print(f"   Tumor slices   : {tumor_slices.shape} ({tumor_slices.dtype})")
 print(f"   Saved to       : {OUTPUT_DIR}")

@@ -1,15 +1,10 @@
 """
 Run Baseline f-AnoGAN Training
 ------------------------------
-This is the master script for Phase 1. It pulls together your data,
-your models, and your WGAN-GP trainer.
 """
 import os
-import sys
 import torch
 import argparse
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.data.dataset import get_dataloaders
 from src.models.generator import Generator
@@ -19,18 +14,21 @@ from src.training.trainer import WGANTrainer
 def main():
     parser = argparse.ArgumentParser(description="Train the baseline WGAN-GP")
     parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train')
-    # Default exactly to your Windows path for the Jenkins local test
-    parser.add_argument('--data_dir', type=str, default=r"C:\Users\Ronak Daniel\Documents\atml-brain-anomaly\data\processed", help='Data directory path')
+    parser.add_argument('--data_dir', type=str, default="./data/processed", help='Data directory path')
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🚀 Starting WGAN-GP Baseline Training on: {device}")
     
-    # Use whatever path the argument parser gives us
     DATA_DIR = args.data_dir
     
     print(f"Loading data from {DATA_DIR}...")
-    train_loader, val_loader, _ = get_dataloaders(DATA_DIR, batch_size=16)
+    
+    # ---------------------------------------------------------
+    # THE SPEED FIX: Massively increased batch size, added 4 CPU 
+    # workers to fetch data, and pinned memory for fast GPU transfer.
+    # ---------------------------------------------------------
+    train_loader, val_loader, _ = get_dataloaders(DATA_DIR, batch_size=128, num_workers=4)
     
     print("Initializing models...")
     generator = Generator().to(device)

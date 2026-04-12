@@ -224,3 +224,8 @@ user_logs/
 # Protect GitHub from large data and app files
 data/processed/*.npy
 *.war
+
+# Azure ML Overrides
+/data/
+/outputs/
+.azureml/
