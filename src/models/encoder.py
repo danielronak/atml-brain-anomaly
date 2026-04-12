@@ -1,41 +1,43 @@
 import torch
 import torch.nn as nn
 
-class Encoder(nn.Module):
-    def __init__(self, in_channels=1, features=32, z_dim=512):
+class Encoder3D(nn.Module):
+    """
+    Takes a 3D MRI volume (Real or Fake) and compresses it down into 
+    a 1D latent vector (z) of size 128. This is the core of f-AnoGAN.
+    """
+    def __init__(self, latent_dim=128):
         super().__init__()
+        self.latent_dim = latent_dim
         
-        # Architecture mirrors the Discriminator but outputs a latent vector
-        self.net = nn.Sequential(
-            # Input: (batch, 1, 128, 128)
-            nn.Conv2d(in_channels, features, 4, 2, 1, bias=False),
+        self.conv_blocks = nn.Sequential(
+            # Input: (Batch, 1, 64, 64, 64)
+            nn.Conv3d(1, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
-            # Size: (batch, 32, 64, 64)
-
-            nn.Conv2d(features, features * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(features * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # Size: (batch, 64, 32, 32)
-
-            nn.Conv2d(features * 2, features * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(features * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # Size: (batch, 128, 16, 16)
-
-            nn.Conv2d(features * 4, features * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(features * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # Size: (batch, 256, 8, 8)
             
-            nn.Conv2d(features * 8, features * 16, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(features * 16),
+            # Input: (Batch, 64, 32, 32, 32)
+            nn.Conv3d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm3d(128),
             nn.LeakyReLU(0.2, inplace=True),
-            # Size: (batch, 512, 4, 4)
-
-            # Final mapping layer: compress down to the exact z_dim (512)
-            nn.Conv2d(features * 16, z_dim, 4, 1, 0, bias=False)
-            # Final Size: (batch, 512, 1, 1)
+            
+            # Input: (Batch, 128, 16, 16, 16)
+            nn.Conv3d(128, 256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm3d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            
+            # Input: (Batch, 256, 8, 8, 8) -> Output: (Batch, 512, 4, 4, 4)
+            nn.Conv3d(256, 512, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm3d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+        )
+        
+        # Compress the 3D features into the 128-dimensional latent space
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512 * 4 * 4 * 4, self.latent_dim)
         )
 
     def forward(self, x):
-        return self.net(x)
+        features = self.conv_blocks(x)
+        z = self.fc(features)
+        return z
