@@ -1,58 +1,84 @@
-"""
-Run Baseline f-AnoGAN Training
-------------------------------
-"""
 import os
 import torch
-import argparse
+import torch.nn as nn
+import torch.optim as optim
+from tqdm import tqdm
 
-from src.data.dataset import get_dataloaders
-from src.models.generator import Generator
-from src.models.discriminator import Discriminator
-from src.training.trainer import WGANTrainer
+from src.data.dataset import get_brats_dataloader
+from src.models.baseline import Generator3D, Discriminator3D
 
-def main():
-    parser = argparse.ArgumentParser(description="Train the baseline WGAN-GP")
-    parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train')
-    parser.add_argument('--data_dir', type=str, default="./data/processed", help='Data directory path')
-    args = parser.parse_args()
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🚀 Starting WGAN-GP Baseline Training on: {device}")
-    
-    DATA_DIR = args.data_dir
-    
-    print(f"Loading data from {DATA_DIR}...")
-    
-    # ---------------------------------------------------------
-    # THE SPEED FIX: Massively increased batch size, added 4 CPU 
-    # workers to fetch data, and pinned memory for fast GPU transfer.
-    # ---------------------------------------------------------
-    train_loader, val_loader, _ = get_dataloaders(DATA_DIR, batch_size=128, num_workers=4)
-    
-    print("Initializing models...")
-    generator = Generator().to(device)
-    discriminator = Discriminator().to(device)
-    
-    trainer = WGANTrainer(
-        generator=generator,
-        discriminator=discriminator,
-        train_loader=train_loader,
-        device=device,
-        lr=1e-4
-    )
-    
-    EPOCHS = args.epochs
-    print(f"Starting training loop for {EPOCHS} epoch(s)...")
-    
-    for epoch in range(EPOCHS):
-        d_loss, g_loss = trainer.train_epoch(epoch)
-        print(f"✅ Epoch {epoch} Complete | Avg D_Loss: {d_loss:.4f} | Avg G_Loss: {g_loss:.4f}")
+def train():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
         
-    os.makedirs("outputs", exist_ok=True)
-    torch.save(generator.state_dict(), "outputs/trained_generator.pth")
-    torch.save(discriminator.state_dict(), "outputs/trained_discriminator.pth")
-    print("🎉 Training complete! Checkpoints saved.")
+    print(f"Using device: {device}")
+
+    batch_size = 2
+    latent_dim = 128
+    lr = 0.0002
+    epochs = 50 
+    data_path = "data/raw"
+
+    os.makedirs("checkpoints", exist_ok=True)
+
+    print("Loading Dataloader...")
+    dataloader = get_brats_dataloader(data_path, batch_size=batch_size)
+
+    print("Initializing Models...")
+    generator = Generator3D(latent_dim=latent_dim).to(device)
+    discriminator = Discriminator3D().to(device)
+
+    criterion = nn.BCELoss()
+    opt_g = optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
+    opt_d = optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
+
+    print(f"Starting Training Loop for {epochs} Epochs...")
+    for epoch in range(epochs):
+        loop = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}")
+        
+        for batch_idx, batch in enumerate(loop):
+            real_images = batch["image"].to(device)
+            current_batch_size = real_images.size(0)
+            
+            real_labels = torch.ones(current_batch_size, 1).to(device)
+            fake_labels = torch.zeros(current_batch_size, 1).to(device)
+
+            opt_d.zero_grad()
+            validity_real, _ = discriminator(real_images)
+            loss_d_real = criterion(validity_real, real_labels)
+            
+            noise = torch.randn(current_batch_size, latent_dim).to(device)
+            fake_images = generator(noise)
+            validity_fake, _ = discriminator(fake_images.detach()) 
+            loss_d_fake = criterion(validity_fake, fake_labels)
+            
+            loss_d = (loss_d_real + loss_d_fake) / 2
+            loss_d.backward()
+            opt_d.step()
+
+            opt_g.zero_grad()
+            validity_fake_for_g, _ = discriminator(fake_images)
+            loss_g = criterion(validity_fake_for_g, real_labels)
+            
+            loss_g.backward()
+            opt_g.step()
+
+            loop.set_postfix(Loss_D=loss_d.item(), Loss_G=loss_g.item())
+            
+        # Save every 5 epochs
+        if (epoch + 1) % 5 == 0:
+            print(f"\nSaving checkpoint for Epoch {epoch + 1}...")
+            torch.save(generator.state_dict(), f"checkpoints/generator_epoch_{epoch+1}.pth")
+            torch.save(discriminator.state_dict(), f"checkpoints/discriminator_epoch_{epoch+1}.pth")
+            
+    print("\nSaving Final Checkpoints...")
+    torch.save(generator.state_dict(), "checkpoints/generator_baseline_final.pth")
+    torch.save(discriminator.state_dict(), "checkpoints/discriminator_baseline_final.pth")
+    print("Overnight training complete!")
 
 if __name__ == "__main__":
-    main()
+    train()
