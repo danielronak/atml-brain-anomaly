@@ -32,12 +32,19 @@ def train():
     generator = Generator3D(latent_dim=latent_dim).to(device)
     discriminator = Discriminator3D().to(device)
 
+    # --- ADD THIS BLOCK TO RESUME ---
+    resume_epoch = 25 
+    print(f"Loading saved checkpoints from Epoch {resume_epoch}...")
+    generator.load_state_dict(torch.load(f"checkpoints/generator_epoch_{resume_epoch}.pth", map_location=device))
+    discriminator.load_state_dict(torch.load(f"checkpoints/discriminator_epoch_{resume_epoch}.pth", map_location=device))
+    # --------------------------------
+
     criterion = nn.BCELoss()
     opt_g = optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
     opt_d = optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
 
     print(f"Starting Training Loop for {epochs} Epochs...")
-    for epoch in range(epochs):
+    for epoch in range(resume_epoch, epochs):
         loop = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}")
         
         for batch_idx, batch in enumerate(loop):

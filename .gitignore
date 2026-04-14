@@ -215,6 +215,16 @@ azure/config.yml
 outputs/
 *.pth
 *.pt
+# Ignore Data
+data/
+
+# Ignore Weights
+checkpoints/
+*.pth
+
+# Ignore Python caches
+__pycache__/
+*.pyc
 
 # Ignore Azure ML local configuration/cache folders
 .azureml/
