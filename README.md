@@ -19,4 +19,5 @@ anatomically coherent reconstruction and sharper anomaly maps.
 - Neel Jaiswal
 
 ## Status
-🔧 Phase 1 — Environment & Repository Setup
+✅ Phase 1-3: Baseline 3D CNN f-AnoGAN Pipeline Complete (Mode Collapse Documented)
+🚀 Phase 4: Architecting 3D Swin-UNET (In Progress)
