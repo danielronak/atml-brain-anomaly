@@ -72,7 +72,7 @@ def score_anomaly():
         return
         
     # Let's grab the 5th patient just to ensure we get a good solid tumor example
-    target_patient_dir = patient_folders[5]
+    target_patient_dir = patient_folders[20]
     patient_id = os.path.basename(target_patient_dir)
     
     # In BraTS 2021, the files are named exactly after the patient folder
