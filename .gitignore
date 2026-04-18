@@ -207,35 +207,51 @@ marimo/_lsp/
 __marimo__/
 azure/config.yml 
 
-# =========================
-# Custom MLOps Additions
-# =========================
 
-# Ignore PyTorch model weights and checkpoints
-outputs/
+# ==============================================
+# Project-Specific Ignores
+# ==============================================
+
+# Model weights — large, not suitable for git
 *.pth
 *.pt
-# Ignore Data
-data/
+*.ckpt
 
-# Ignore Weights
-checkpoints/
-*.pth
+# Baseline CNN checkpoints (tracked locally, not on GitHub)
+baseline_cnn/checkpoints/
 
-# Ignore Python caches
-__pycache__/
-*.pyc
+# New model checkpoints (saved to Google Drive during training)
+results/*/checkpoints/
+results/*/patient_tensors/
 
-# Ignore Azure ML local configuration/cache folders
+# Raw and processed data (too large for git)
+data/raw/
+data/processed/
+data/*.npy
+data/*.tar
+
+# IXI download output (terabytes of NIfTI files)
+data/ixi/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Azure ML leftovers
 .azureml/
 user_logs/
 *.log
+azure/config.yml
 
-# Protect GitHub from large data and app files
-data/processed/*.npy
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Large binary files
 *.war
-
-# Azure ML Overrides
-/data/
-/outputs/
-.azureml/
+*.npy
+*.nii
+*.nii.gz

@@ -1,0 +1,18 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+type: command
+description: Phase 1 WGAN-GP Baseline Training
+experiment_name: atml-brain-anomaly-baseline
+
+code: .
+
+inputs:
+  cloud_data:
+    type: uri_folder
+    path: azureml:brain-anomaly-data@latest
+
+command: >-
+  pip install scikit-learn && 
+  python train_baseline.py --epochs 50 --data_dir ${{inputs.cloud_data}}
+
+environment: azureml:AzureML-ACPT-pytorch-1.11-py38-cuda11.3-gpu@latest
+compute: azureml:gpu-cluster
