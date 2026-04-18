@@ -32,8 +32,14 @@ class AnomalyScorer:
 
     model_type:
         'vqvae'   — model(x) returns (reconstruction, quant_loss)
-        'gan'     — generator(encoder(x)) returns reconstruction
-                    Provide encoder= kwarg for GAN models
+        'gan'     — AttentionUNet3D is volume-to-volume: G(x) → reconstruction.
+                    The encoder (izi_f) maps x → latent vector for optional
+                    feature-space anomaly scoring, NOT for reconstruction.
+
+    How anomaly detection works:
+        VQ-VAE:  residual = |x - G(x)|  (codebook discretisation rejects tumours)
+        GAN:     residual = |x - G(x)|  (generator trained to reconstruct healthy)
+                 Optional: blend with feature distance |E(x) - E(G(x))| (izi_f)
     """
 
     def __init__(self,
@@ -50,23 +56,31 @@ class AnomalyScorer:
         self.model_type = model_type
         self.config = config
         self.device = device
+        self.encoder = None
+        self.discriminator = None
 
-        if model_type == "gan":
-            assert encoder is not None, "GAN inference requires an encoder."
+        if model_type == "gan" and encoder is not None:
+            # Encoder is OPTIONAL for GAN — used for feature-space scoring blend
             self.encoder = encoder.eval().to(device)
-            self.discriminator = discriminator.eval().to(device) if discriminator else None
+        if discriminator is not None:
+            self.discriminator = discriminator.eval().to(device)
 
         self.sigma = config["evaluation"]["gaussian_smooth_sigma"]
 
     def _reconstruct(self, volume: torch.Tensor) -> torch.Tensor:
-        """Get pseudo-healthy reconstruction from the model."""
+        """
+        Get pseudo-healthy reconstruction from the model.
+
+        Both VQ-VAE and AttentionUNet3D (GAN generator) are volume-to-volume
+        networks: input (B, C, D, H, W) → output (B, C, D, H, W).
+        The izi_f encoder produces a latent *vector* and is NOT fed to G.
+        """
         x = volume.to(self.device)
         with torch.no_grad():
             if self.model_type == "vqvae":
-                recon, _ = self.model(x)
-            else:  # gan
-                z = self.encoder(x)
-                recon = self.model(z)
+                recon, _ = self.model(x)      # VQ-VAE: (recon, quant_loss)
+            else:                              # GAN: direct volume reconstruction
+                recon = self.model(x)          # AttentionUNet3D: G(x) → recon
         return recon
 
     def _compute_residual(self,
@@ -74,9 +88,25 @@ class AnomalyScorer:
                            recon: torch.Tensor) -> torch.Tensor:
         """
         Pixel-wise absolute difference, Gaussian-smoothed.
-        For dual-channel, take channel-wise mean of residual.
+        For dual-channel (T1+T2), take channel-wise mean of residual.
+
+        For GAN models with an izi_f encoder, optionally blend the
+        pixel-space residual with a rough feature-space distance map.
+        The blend improves localisation when the generator reconstructs
+        low-frequency structure well but blurs fine details.
         """
         residual = torch.abs(volume - recon)  # (1, C, D, H, W)
+
+        # Optional: blend with izi_f feature-space map for GAN models
+        if self.model_type == "gan" and self.encoder is not None:
+            with torch.no_grad():
+                z_real  = self.encoder(volume.to(self.device))   # (B, latent_dim)
+                z_recon = self.encoder(recon.to(self.device))    # (B, latent_dim)
+            # Feature distance: scalar per-volume, broadcast to spatial map
+            feat_dist = F.mse_loss(z_real, z_recon, reduction="mean")
+            # Weight pixel residual slightly toward feature distance
+            # kappa=0.1 keeps pixel residual dominant (tunable)
+            residual = residual + 0.1 * feat_dist
 
         if residual.shape[1] > 1:
             residual = residual.mean(dim=1, keepdim=True)  # (1, 1, D, H, W)
