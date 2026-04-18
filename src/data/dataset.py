@@ -250,7 +250,7 @@ def get_brats_test_loader(config: dict):
 def get_brats_dataloader(data_dir: str, batch_size: int = 2):
     """Original loader kept for CNN naive baseline compatibility."""
     from monai.transforms import ScaleIntensityd
-    from monai.data import Dataset as MonaiDataset as MonaiDataset
+    from monai.data import Dataset as MonaiDataset
 
     search_path = os.path.join(data_dir, "**", "*_t1ce.nii.gz")
     images = sorted(glob.glob(search_path, recursive=True))
