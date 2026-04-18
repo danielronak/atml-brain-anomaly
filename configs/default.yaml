@@ -1,0 +1,101 @@
+##############################################################
+# ATML Brain Anomaly Detection — Central Config
+# All hyperparameters in one place. Override per-model in
+# training scripts by loading this and updating specific keys.
+##############################################################
+
+data:
+  # Google Drive paths — Ronak updates these to match his Drive
+  ixi_dir: "/content/drive/MyDrive/atml/data/ixi"
+  brats_dir: "/content/drive/MyDrive/atml/data/brats2021"
+  checkpoint_dir: "/content/drive/MyDrive/atml/checkpoints"
+  results_dir: "/content/drive/MyDrive/atml/results"
+
+  # Volume resolution
+  resolution: [128, 128, 128]
+  spacing: [1.5, 1.5, 1.5]       # mm — uniform voxel spacing
+
+  # Modality: "t1" | "t2" | "dual" (T1+T2 joint — recommended)
+  modality: "dual"
+
+  # Preprocessing
+  intensity_percentile_low: 1    # clip bottom 1% of voxel intensities
+  intensity_percentile_high: 99  # clip top 1%
+
+  # Split (IXI only — BraTS is always test)
+  train_val_split: 0.90          # 90% train, 10% validation
+
+  # Dataloader
+  batch_size: 2
+  num_workers: 0                 # Keep 0 for Colab stability
+
+  # Number of BraTS patients to evaluate at test time
+  n_test_patients: 50
+
+##############################################################
+# VQ-VAE (Model 4 — Primary Architecture)
+##############################################################
+vqvae:
+  in_channels: 2                 # 2 for dual T1+T2, 1 for single
+  out_channels: 2
+  num_channels: [64, 128, 256]   # Encoder channel progression
+  num_res_layers: 2              # Residual blocks per scale
+  num_embeddings: 256            # Codebook size
+  embedding_dim: 32              # Codebook vector dimension
+  commitment_cost: 0.25          # Beta — how hard to commit to codebook
+
+  # Training
+  lr: 0.0002
+  epochs: 100
+  checkpoint_every: 10
+  name: "vqvae"
+
+##############################################################
+# Swin-UNET GAN (Model 3)
+##############################################################
+swin:
+  in_channels: 2                 # Match modality setting above
+  out_channels: 2
+  feature_size: 24               # 24 = T4 safe, 48 = A100 only
+  use_checkpoint: true           # Gradient checkpointing — keep ON
+  name: "swin_gan"
+
+##############################################################
+# CNN Generator (Models 1 + 2)
+##############################################################
+cnn:
+  in_channels: 2                 # Match modality setting above
+  latent_dim: 128
+  name: "cnn_gan"
+
+##############################################################
+# GAN Training (shared: Models 2 + 3)
+##############################################################
+gan:
+  lr_g: 0.0001                   # Generator LR
+  lr_d: 0.0004                   # Discriminator LR = 4x LR_G (TTUR)
+  lambda_gp: 10.0                # WGAN Gradient Penalty weight
+  lambda_rec: 10.0               # L1 reconstruction weight
+  n_critic: 5                    # Discriminator steps per G step
+  epochs: 50
+  checkpoint_every: 5
+  adam_betas: [0.0, 0.9]        # Standard WGAN-GP betas
+
+##############################################################
+# Encoder — izi_f (for GAN models only)
+##############################################################
+encoder:
+  latent_dim: 128
+  lr: 0.0002
+  epochs: 20
+  kappa: 1.0                     # Feature loss weight
+
+##############################################################
+# Evaluation
+##############################################################
+evaluation:
+  threshold_min: 0.01
+  threshold_max: 0.50
+  threshold_steps: 50
+  gaussian_smooth_sigma: 1.0    # Smooth residual map before scoring
+  anomaly_map_slice: 64         # Which axial slice to visualise (0-indexed)

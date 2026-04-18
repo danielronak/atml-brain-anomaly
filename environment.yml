@@ -1,7 +1,6 @@
 name: atml
 channels:
   - pytorch
-  - nvidia
   - conda-forge
   - defaults
 dependencies:
@@ -13,13 +12,16 @@ dependencies:
   - scikit-image
   - nibabel
   - tqdm
+  - scipy
+  - pandas
+  - pyyaml
   - pip:
     - torch==2.3.0
     - torchvision==0.18.0
-    - monai
-    - timm
-    - mlflow
-    - azure-ai-ml
-    - azureml-mlflow
-    - opencv-python
+    - monai>=1.3.0
+    - monai-generative>=0.2.3
     - einops
+    - timm
+    - opencv-python
+    # Note: azure-ai-ml, azureml-mlflow removed (Azure plan abandoned)
+    # Note: mlflow removed (not used in current pipeline)
