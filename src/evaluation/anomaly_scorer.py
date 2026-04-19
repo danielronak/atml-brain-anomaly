@@ -234,14 +234,17 @@ class AnomalyScorer:
                       f"AUROC: {m['auroc']:.4f} | "
                       f"HD95: {m['hausdorff95']:.1f}")
 
-            # Save residual + recon tensors for visualisation
+            # Save residual + recon tensors for visualisation.
+            # .as_subclass(torch.Tensor) strips MONAI MetaTensor metadata
+            # (affine, spacing etc.) which embeds numpy globals that break
+            # torch.load with weights_only=True in PyTorch 2.6+.
             pt_dir = save_dir / "patient_tensors"
             pt_dir.mkdir(exist_ok=True)
             torch.save({
-                "volume": result["volume"].half(),   # half precision to save Drive space
-                "recon": result["recon"].half(),
-                "residual": result["residual"].half(),
-                "mask": result["mask"].half(),
+                "volume":   result["volume"].half().as_subclass(torch.Tensor),
+                "recon":    result["recon"].half().as_subclass(torch.Tensor),
+                "residual": result["residual"].half().as_subclass(torch.Tensor),
+                "mask":     result["mask"].half().as_subclass(torch.Tensor),
             }, pt_dir / f"{pid}.pt")
 
         df = pd.DataFrame(records)
