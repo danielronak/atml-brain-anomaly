@@ -12,10 +12,29 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import streamlit as st
+
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+except ModuleNotFoundError:
+    st.error(
+        "**plotly not found.**  "
+        "Install it in your conda env:\n"
+        "```\nconda activate atml\npip install plotly streamlit\n```"
+    )
+    st.stop()
+
+try:
+    import torch
+except ModuleNotFoundError:
+    st.error(
+        "**PyTorch not found in this Python environment.**\n\n"
+        "You are running the wrong Python. Use the atml conda environment:\n"
+        "```\nconda activate atml\nstreamlit run app.py\n```"
+    )
+    st.stop()
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -253,7 +272,7 @@ with tab_overview:
             fig.update_layout(**plotly_dark_layout(yaxis_title=yaxis_title, height=360,
                                                    showlegend=True,
                                                    legend=dict(x=0.02, y=0.98)))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
     violin(chart_l, "Dice Score Distribution",  "best_dice", "Dice ↑")
     violin(chart_r, "AUROC Distribution",        "auroc",     "AUROC ↑")
@@ -272,7 +291,7 @@ with tab_overview:
         }).sort_values("Dice ↑", ascending=False)
         st.dataframe(
             disp[["Patient","Model","Dice ↑","AUROC ↑","HD95 ↓ (mm)"]],
-            use_container_width=True, hide_index=True,
+            width='stretch', hide_index=True,
         )
     else:
         st.info("Run the evaluation notebook and place CSVs in `results/`.")
@@ -293,7 +312,7 @@ with tab_overview:
         with cols[i % 2]:
             st.markdown(f"**{title}**")
             if fp.exists():
-                st.image(str(fp), use_container_width=True)
+                st.image(str(fp), width='stretch')
             else:
                 st.markdown(f'<div class="info-box">Figure not found:<br><code>results/figures/{fname}</code></div>',
                             unsafe_allow_html=True)
@@ -417,7 +436,7 @@ with tab_explorer:
             )
             fig_slices.update_xaxes(showticklabels=False)
             fig_slices.update_yaxes(showticklabels=False, autorange="reversed")
-            st.plotly_chart(fig_slices, use_container_width=True)
+            st.plotly_chart(fig_slices, width='stretch')
 
         # ── Model diff comparison ─────────────────────────────────
         if len(loaded_tensors) == 2:
@@ -439,7 +458,7 @@ with tab_explorer:
             diff_fig.update_layout(**plotly_dark_layout(height=280))
             diff_fig.update_xaxes(showticklabels=False)
             diff_fig.update_yaxes(showticklabels=False, autorange="reversed")
-            st.plotly_chart(diff_fig, use_container_width=True)
+            st.plotly_chart(diff_fig, width='stretch')
 
     # ── Threshold-Dice curves from CSV columns ────────────────────
     import ast
@@ -475,7 +494,7 @@ with tab_explorer:
         fig_sweep.update_layout(**plotly_dark_layout(
             xaxis_title="Threshold", yaxis_title="Dice", height=280, showlegend=True,
         ))
-        st.plotly_chart(fig_sweep, use_container_width=True)
+        st.plotly_chart(fig_sweep, width='stretch')
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -484,8 +503,6 @@ with tab_explorer:
 with tab_infer:
     st.markdown("### ⚡ Live Inference")
     st.caption("Run models on any BraTS patient directly. Needs local checkpoints + BraTS data.")
-
-    import torch
 
     # ── Pre-req status ─────────────────────────────────────────────
     vqvae_path = Path(vqvae_ckpt_str).expanduser() if vqvae_ckpt_str else None
@@ -677,7 +694,7 @@ with tab_infer:
                     fig_inf.update_layout(**plotly_dark_layout(height=620))
                     fig_inf.update_xaxes(showticklabels=False)
                     fig_inf.update_yaxes(showticklabels=False, autorange="reversed")
-                    st.plotly_chart(fig_inf, use_container_width=True)
+                    st.plotly_chart(fig_inf, width='stretch')
 
         except ImportError as e:
             st.error(f"Import error: {e}")
