@@ -41,10 +41,21 @@ LABELS = {
 
 
 def _axial_slice(tensor: torch.Tensor, s: int | None = None) -> np.ndarray:
-    """Extract a 2D axial slice from a (C, D, H, W) volume tensor."""
+    """Extract a 2D axial slice from a volume tensor of any shape.
+
+    Handles all shapes that may come out of the evaluation pipeline:
+      (1, C, D, H, W)  — saved patient tensors (batch dim present)
+      (C, D, H, W)     — after batch squeeze
+      (1, D, H, W)     — single-channel with batch dim
+    """
     arr = tensor.float().cpu().numpy()
+    # Remove batch dimension if present: (1, C, D, H, W) → (C, D, H, W)
+    if arr.ndim == 5:
+        arr = arr[0]
+    # Average channels for display: (C, D, H, W) → (D, H, W)
     if arr.ndim == 4:
-        arr = arr.mean(0)           # average channels for display
+        arr = arr.mean(0)
+    # arr is now (D, H, W) — pick the requested axial slice
     s = s if s is not None else arr.shape[0] // 2
     return arr[s]
 
@@ -73,9 +84,16 @@ def plot_reconstruction_grid(patient_data: dict,
     row_labels = ["Input (T1)", "Reconstruction", "Anomaly Map"]
 
     first_model = model_order[0]
-    vol = patient_data[first_model]["volume"]
+    vol  = patient_data[first_model]["volume"]
     mask = patient_data[first_model]["mask"]
-    s = slice_idx if slice_idx is not None else vol.shape[1] // 2
+
+    # Compute middle axial slice from spatial depth dim.
+    # Tensors may be (1, C, D, H, W) with batch dim or (C, D, H, W).
+    # Squeeze to (D, H, W) first to avoid picking channel dim by mistake.
+    _tmp = vol.float().cpu().numpy()
+    if _tmp.ndim == 5: _tmp = _tmp[0]   # remove batch: (C, D, H, W)
+    if _tmp.ndim == 4: _tmp = _tmp[0]   # first channel: (D, H, W)
+    s = slice_idx if slice_idx is not None else _tmp.shape[0] // 2
 
     for row in range(n_rows):
         for col in range(n_cols):
