@@ -10,6 +10,28 @@ import torch
 import torch.nn as nn
 
 
+def infer_swin_feature_size(ckpt_path: Path, device: torch.device) -> int:
+    """
+    Detect the feature_size used during Swin GAN / AttentionUNet3D training
+    by inspecting the first conv layer weight shape in the checkpoint.
+
+    AttentionUNet3D.inc.net.0 is a Conv3d(in_ch, feature_size, 3).
+    Its weight tensor has shape [feature_size, in_ch, 3, 3, 3].
+    Reading dim 0 gives us feature_size — no need to hard-code it.
+
+    Args:
+        ckpt_path: path to generator_final.pth
+        device:    torch device
+
+    Returns:
+        feature_size (int) — e.g. 24 (T4), 36 (L4), 48 (A100)
+    """
+    raw = torch.load(ckpt_path, map_location=device)
+    state = raw["model"] if isinstance(raw, dict) and "model" in raw else raw
+    feature_size = int(state["inc.net.0.weight"].shape[0])
+    return feature_size
+
+
 def load_state_dict_flexible(model: nn.Module,
                               ckpt_path: Path,
                               device: torch.device) -> nn.Module:
