@@ -124,27 +124,39 @@ class AnomalyScorer:
 
     @staticmethod
     def _gaussian_smooth(x: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
-        """Simple 3D Gaussian smoothing via separable 1D convolutions."""
-        kernel_size = int(6 * sigma + 1) | 1  # odd
+        """
+        3D Gaussian smoothing via separable 1D convolutions.
+
+        F.pad with mode='replicate' on a 5D tensor requires exactly 6 pad values
+        (one pair per spatial dim, in reverse order: W, H, D).
+        The previous code computed 4 values for H which PyTorch rejects.
+        Fixed: always build a 6-element pad, zeroing the dims we don't want to pad.
+        """
+        kernel_size = int(6 * sigma + 1) | 1  # ensure odd
         half = kernel_size // 2
         coords = torch.arange(kernel_size, dtype=torch.float32) - half
         kernel_1d = torch.exp(-0.5 * (coords / sigma) ** 2)
         kernel_1d = kernel_1d / kernel_1d.sum()
 
-        device = x.device
-        k = kernel_1d.to(device)
-
-        def conv_along(t, dim):
-            # Reshape to apply 1D conv along one spatial axis
-            shape = t.shape  # (1, 1, D, H, W)
-            t = t.squeeze(0).squeeze(0)  # (D, H, W)
-            t = t.unsqueeze(0).unsqueeze(0)  # (1, 1, D, H, W)
-            weight = k.view(1, 1, *([1] * (dim - 2)), -1, *([1] * (4 - dim)))
-            pad = [0] * (2 * (4 - dim)) + [half, half]
-            return F.conv3d(F.pad(t, pad, mode="replicate"), weight)
+        k = kernel_1d.to(x.device)
 
         for dim in [2, 3, 4]:
-            x = conv_along(x, dim)
+            # Weight: 1D kernel placed along `dim`, size-1 along all other dims
+            sizes = [1, 1, 1, 1, 1]
+            sizes[dim] = kernel_size
+            weight = k.reshape(*sizes)
+
+            # F.pad order (last→first): [W_lo, W_hi, H_lo, H_hi, D_lo, D_hi]
+            # For 5D replicate mode, pad must have exactly 6 elements.
+            # idx maps dim → the correct position in the reversed pad list:
+            #   dim=4 (W) → idx=0, dim=3 (H) → idx=2, dim=2 (D) → idx=4
+            pad = [0] * 6
+            idx = 2 * (4 - dim)
+            pad[idx] = half
+            pad[idx + 1] = half
+
+            x = F.conv3d(F.pad(x, pad, mode="replicate"), weight)
+
         return x
 
     def score_patient(self,
