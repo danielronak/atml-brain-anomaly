@@ -197,10 +197,13 @@ class AnomalyScorer:
         records = []
 
         for i, batch in enumerate(test_loader):
-            volume = batch["image"]         # (1, C, D, H, W)
-            mask = batch["mask"]            # (1, 1, D, H, W)
-            # Patient ID from filename if available; else index
-            pid = batch.get("patient_id", [f"patient_{i:03d}"])[0]
+            volume = batch["image"]   # (1, C, D, H, W)
+            mask   = batch["mask"]    # (1, 1, D, H, W)
+
+            # Extract patient ID — MONAI batches don't carry filenames,
+            # so we use zero-padded index (patient_000 … patient_049).
+            # This maps 1:1 to the sorted BraTS patient list in dataset.py.
+            pid = f"patient_{i:03d}"
 
             result = self.score_patient(volume, mask, pid)
             m = result["metrics"]
